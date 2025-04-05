@@ -176,6 +176,23 @@ function startServer() {
     setTimeout(startServer, 5000);
   });
 
+  // Graceful shutdown when process receives termination signal
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received: closing HTTP server');
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT signal received: closing HTTP server');
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  });
+
   return server;
 }
 

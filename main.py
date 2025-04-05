@@ -1,6 +1,77 @@
 from flask import Flask, redirect
+import subprocess
+import os
+import signal
+import threading
+import time
+import atexit
 
 app = Flask(__name__)
+
+# Variable global para almacenar el proceso del servidor Node.js
+node_process = None
+
+def start_node_server():
+    """Inicia el servidor Node.js en un subproceso"""
+    global node_process
+    try:
+        # Si ya hay un proceso en ejecución, terminarlo
+        if node_process:
+            try:
+                os.killpg(os.getpgid(node_process.pid), signal.SIGTERM)
+            except:
+                pass
+        
+        # Iniciar el servidor Node.js
+        print("Iniciando servidor Node.js...")
+        node_process = subprocess.Popen(
+            "node server.js",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid  # Crear un nuevo grupo de procesos
+        )
+        
+        # Función para leer y mostrar la salida del servidor Node.js
+        def read_output():
+            while True:
+                if node_process and node_process.poll() is not None:
+                    break
+                if node_process and node_process.stdout:
+                    output = node_process.stdout.readline()
+                    if output:
+                        print(f"[Node.js] {output.decode().strip()}")
+                if node_process and node_process.stderr:
+                    error = node_process.stderr.readline()
+                    if error:
+                        print(f"[Node.js Error] {error.decode().strip()}")
+                time.sleep(0.1)
+        
+        # Iniciar hilo para leer la salida
+        threading.Thread(target=read_output, daemon=True).start()
+        
+        print("Servidor Node.js iniciado correctamente")
+        return True
+    except Exception as e:
+        print(f"Error al iniciar el servidor Node.js: {str(e)}")
+        return False
+
+# Función para limpiar y detener el servidor Node.js cuando Flask se detenga
+def cleanup():
+    global node_process
+    if node_process:
+        print("Deteniendo servidor Node.js...")
+        try:
+            os.killpg(os.getpgid(node_process.pid), signal.SIGTERM)
+            print("Servidor Node.js detenido correctamente")
+        except:
+            print("Error al detener el servidor Node.js")
+
+# Registrar la función de limpieza para ejecutarse cuando Flask se detenga
+atexit.register(cleanup)
+
+# Iniciar el servidor Node.js cuando se inicie Flask
+start_node_server()
 
 @app.route('/')
 def index():
