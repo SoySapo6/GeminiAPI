@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const { exec } = require('child_process');
 require('dotenv').config();
 
 const app = express();
@@ -16,7 +17,7 @@ app.get('/', (req, res) => {
   res.status(200).send('Gemini Forwarding API is running');
 });
 
-// Main endpoint to forward messages to Gemini
+// Main endpoint to forward messages to Gemini using direct curl
 app.get('/ask/:message', async (req, res) => {
   try {
     const userMessage = req.params.message;
@@ -25,43 +26,52 @@ app.get('/ask/:message', async (req, res) => {
       return res.status(400).send('Please provide a message');
     }
     
-    // Format the prompt with the required prefix
-    const formattedPrompt = `Eres una IA llamada MayIA y tu creador es SoyMaycol : ${userMessage}`;
-    
-    // Make request to Gemini API
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        contents: [{
-          parts: [{ text: formattedPrompt }]
+    // Use direct curl command as provided in the example
+    const command = `curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \\
+      -H "Content-Type: application/json" \\
+      -X POST \\
+      -d '{
+        "contents": [{
+          "parts": [{"text": "Eres una IA y te llamas MayIA y te creo SoyMaycol : ${userMessage}"}]
         }]
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+      }'`;
     
-    // Extract the text response from Gemini
-    if (response.data && 
-        response.data.candidates && 
-        response.data.candidates[0] && 
-        response.data.candidates[0].content && 
-        response.data.candidates[0].content.parts && 
-        response.data.candidates[0].content.parts[0] && 
-        response.data.candidates[0].content.parts[0].text) {
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error: ${error.message}`);
+        return res.status(500).send(`Error: ${error.message}`);
+      }
       
-      // Return the raw text response
-      res.send(response.data.candidates[0].content.parts[0].text);
-    } else {
-      res.status(500).send('Failed to get a proper response from Gemini');
-    }
+      if (stderr) {
+        console.error(`stderr: ${stderr}`);
+        return res.status(500).send(`Error: ${stderr}`);
+      }
+      
+      try {
+        // Parse the JSON response
+        const jsonResponse = JSON.parse(stdout);
+        
+        // Extract the text from the response
+        if (jsonResponse && 
+            jsonResponse.candidates && 
+            jsonResponse.candidates[0] && 
+            jsonResponse.candidates[0].content && 
+            jsonResponse.candidates[0].content.parts && 
+            jsonResponse.candidates[0].content.parts[0] && 
+            jsonResponse.candidates[0].content.parts[0].text) {
+          
+          // Send just the raw text
+          res.send(jsonResponse.candidates[0].content.parts[0].text);
+        } else {
+          res.status(500).send('Failed to get a proper response from Gemini');
+        }
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        res.status(500).send(`Error parsing response: ${parseError.message}`);
+      }
+    });
   } catch (error) {
-    console.error('Error calling Gemini API:', error.message);
-    if (error.response) {
-      console.error('Gemini API error response:', error.response.data);
-    }
+    console.error('Error in request:', error.message);
     res.status(500).send(`Error: ${error.message}`);
   }
 });
@@ -75,43 +85,52 @@ app.get('/ask', async (req, res) => {
       return res.status(400).send('Please provide a message parameter');
     }
     
-    // Format the prompt with the required prefix
-    const formattedPrompt = `Eres una IA llamada MayIA y tu creador es SoyMaycol : ${userMessage}`;
-    
-    // Make request to Gemini API
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        contents: [{
-          parts: [{ text: formattedPrompt }]
+    // Use direct curl command as provided in the example
+    const command = `curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \\
+      -H "Content-Type: application/json" \\
+      -X POST \\
+      -d '{
+        "contents": [{
+          "parts": [{"text": "Eres una IA y te llamas MayIA y te creo SoyMaycol : ${userMessage}"}]
         }]
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+      }'`;
     
-    // Extract the text response from Gemini
-    if (response.data && 
-        response.data.candidates && 
-        response.data.candidates[0] && 
-        response.data.candidates[0].content && 
-        response.data.candidates[0].content.parts && 
-        response.data.candidates[0].content.parts[0] && 
-        response.data.candidates[0].content.parts[0].text) {
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error: ${error.message}`);
+        return res.status(500).send(`Error: ${error.message}`);
+      }
       
-      // Return the raw text response
-      res.send(response.data.candidates[0].content.parts[0].text);
-    } else {
-      res.status(500).send('Failed to get a proper response from Gemini');
-    }
+      if (stderr) {
+        console.error(`stderr: ${stderr}`);
+        return res.status(500).send(`Error: ${stderr}`);
+      }
+      
+      try {
+        // Parse the JSON response
+        const jsonResponse = JSON.parse(stdout);
+        
+        // Extract the text from the response
+        if (jsonResponse && 
+            jsonResponse.candidates && 
+            jsonResponse.candidates[0] && 
+            jsonResponse.candidates[0].content && 
+            jsonResponse.candidates[0].content.parts && 
+            jsonResponse.candidates[0].content.parts[0] && 
+            jsonResponse.candidates[0].content.parts[0].text) {
+          
+          // Send just the raw text
+          res.send(jsonResponse.candidates[0].content.parts[0].text);
+        } else {
+          res.status(500).send('Failed to get a proper response from Gemini');
+        }
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        res.status(500).send(`Error parsing response: ${parseError.message}`);
+      }
+    });
   } catch (error) {
-    console.error('Error calling Gemini API:', error.message);
-    if (error.response) {
-      console.error('Gemini API error response:', error.response.data);
-    }
+    console.error('Error in request:', error.message);
     res.status(500).send(`Error: ${error.message}`);
   }
 });
