@@ -149,7 +149,35 @@ app.get('/ask', async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on http://0.0.0.0:${PORT}`);
-});
+// Function to start the server with retry logic
+function startServer() {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on http://0.0.0.0:${PORT}`);
+  });
+
+  // Handle server errors to prevent crashes
+  server.on('error', (error) => {
+    console.error('Server error:', error.message);
+    
+    // If the port is already in use, try again with a delay
+    if (error.code === 'EADDRINUSE') {
+      console.log(`Port ${PORT} is already in use. Retrying in 5 seconds...`);
+      setTimeout(() => {
+        server.close();
+        startServer();
+      }, 5000);
+    }
+  });
+
+  // Handle server close events
+  server.on('close', () => {
+    console.log('Server closed. Attempting to restart...');
+    // Try to restart the server if it closes unexpectedly
+    setTimeout(startServer, 5000);
+  });
+
+  return server;
+}
+
+// Start the server with our new robust logic
+startServer();
